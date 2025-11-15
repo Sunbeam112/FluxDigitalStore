@@ -3,6 +3,7 @@ package com.artemhontar.fluxdigitalstore.api.model;
 import com.artemhontar.fluxdigitalstore.model.Book;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,16 +37,20 @@ public class BookSpecification implements Specification<Book> {
             predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.getMaxPrice()));
         }
 
-        // 4. Author Filter (Requires a JOIN, assuming 'authors' is a ManyToMany collection)
+        // 🚀 4. Max Publication Year Filter (The Fix)
+        // Checks the value from the URL query parameter 'maxPublicationYear'
+        if (filter.getMaxPublicationYear() != null) {
+            // WHERE publicationYear <= maxPublicationYear
+            predicates.add(cb.lessThanOrEqualTo(root.get("publicationYear"), filter.getMaxPublicationYear()));
+        }
+
+        // 5. Author Filter (Requires a JOIN, assuming 'authors' is a ManyToMany collection)
         if (filter.getAuthor() != null && !filter.getAuthor().isBlank()) {
             // Join the 'authors' collection
             Join<Book, Object> authorJoin = root.join("authors", JoinType.INNER);
 
             // Search author name (e.g., name LIKE '%author%')
             predicates.add(cb.like(cb.lower(authorJoin.get("name")), "%" + filter.getAuthor().toLowerCase() + "%"));
-
-            // Note: If Author entity has first and last names, you'd adjust the join path.
-            // Assuming 'name' field on Author entity for simplicity.
         }
 
         // Combine all predicates with an AND operator

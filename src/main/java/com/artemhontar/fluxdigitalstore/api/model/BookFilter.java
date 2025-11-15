@@ -16,6 +16,8 @@ public class BookFilter {
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
 
-    private Integer publicationYear;
+    private Integer minPublicationYear;
+    private Integer maxPublicationYear;
+
     private String category;
 }
