@@ -24,7 +24,7 @@ public class BookConverter {
 
     @Transactional
     public Book toEntity(BookRequest request) {
-        // --- 1. Map basic fields ---
+
         Book book = Book.builder()
                 .title(request.getTitle())
                 .isbn(normalizeISBN(request.getIsbn()))
@@ -39,13 +39,11 @@ public class BookConverter {
 
         if (request.getAuthorNames() != null && !request.getAuthorNames().isEmpty()) {
             Set<Author> authors = request.getAuthorNames().stream()
-                    .map(name -> {
-                        return authorRepository.findByName(name)
-                                .orElseGet(() -> {
-                                    Author newAuthor = new Author(name);
-                                    return authorRepository.save(newAuthor);
-                                });
-                    })
+                    .map(name -> authorRepository.findByName(name)
+                            .orElseGet(() -> {
+                                Author newAuthor = new Author(name);
+                                return authorRepository.save(newAuthor);
+                            }))
                     .collect(Collectors.toSet());
 
             book.setAuthors(authors);

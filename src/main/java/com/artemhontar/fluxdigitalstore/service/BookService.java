@@ -45,28 +45,34 @@ public class BookService {
     }
 
     public Page<Book> searchBooksByFilter(BookFilter filter, Pageable pageable) {
-
         BookSpecification spec = new BookSpecification(filter);
-
         return bookRepo.findAll(spec, pageable);
     }
 
 
     @Transactional
     public Book createBook(Book book) {
-        if (bookRepo.existsByIsbnIgnoreCase(book.getIsbn())) {
-            throw new BookAlreadyExistsException("The book with ISBN " + book.getIsbn() + " is already exists!");
-        }
+
+        String normalizedIsbn = bookConverter.normalizeISBN(book.getIsbn());
+        checkIfBookExists(normalizedIsbn);
+
+        book.setIsbn(normalizedIsbn);
         return bookRepo.save(book);
     }
 
     @Transactional
     public Book createBook(BookRequest bookRequest) {
-        if (bookRepo.existsByIsbnIgnoreCase(bookConverter.normalizeISBN(bookRequest.getIsbn()))) {
-            throw new BookAlreadyExistsException("The book with ISBN " + bookRequest.getIsbn() + " is already exists!");
-        }
+        String normalizedIsbn = bookConverter.normalizeISBN(bookRequest.getIsbn());
+        checkIfBookExists(normalizedIsbn);
+
         Book book = bookConverter.toEntity(bookRequest);
+        book.setIsbn(normalizedIsbn);
         return bookRepo.save(book);
     }
 
+    private void checkIfBookExists(String normalizedIsbn) {
+        if (bookRepo.existsByIsbnIgnoreCase(normalizedIsbn)) {
+            throw new BookAlreadyExistsException("The book with ISBN " + normalizedIsbn + " already exists!");
+        }
+    }
 }
