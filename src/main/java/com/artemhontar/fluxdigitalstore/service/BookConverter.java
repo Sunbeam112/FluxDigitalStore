@@ -1,6 +1,6 @@
 package com.artemhontar.fluxdigitalstore.service;
 
-import com.artemhontar.fluxdigitalstore.api.model.BookRequest;
+import com.artemhontar.fluxdigitalstore.api.model.Book.BookRequest;
 import com.artemhontar.fluxdigitalstore.model.Author;
 import com.artemhontar.fluxdigitalstore.model.Book;
 import com.artemhontar.fluxdigitalstore.model.Category;

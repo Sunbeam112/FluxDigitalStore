@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.api.model;
+package com.artemhontar.fluxdigitalstore.api.model.Book;
 
 import com.artemhontar.fluxdigitalstore.model.Book;
 import jakarta.persistence.criteria.*;

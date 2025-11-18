@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.api.model;
+package com.artemhontar.fluxdigitalstore.api.model.Book;
 
 import lombok.Getter;
 import lombok.Setter;

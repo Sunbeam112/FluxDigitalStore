@@ -1,7 +1,7 @@
 package com.artemhontar.fluxdigitalstore.controller;
 
-import com.artemhontar.fluxdigitalstore.api.model.BookFilter;
-import com.artemhontar.fluxdigitalstore.api.model.BookRequest;
+import com.artemhontar.fluxdigitalstore.api.model.Book.BookFilter;
+import com.artemhontar.fluxdigitalstore.api.model.Book.BookRequest;
 import com.artemhontar.fluxdigitalstore.exception.BookAlreadyExistsException;
 import com.artemhontar.fluxdigitalstore.model.Book;
 import com.artemhontar.fluxdigitalstore.service.BookService;

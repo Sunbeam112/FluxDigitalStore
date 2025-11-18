@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.api.model;
+package com.artemhontar.fluxdigitalstore.api.model.Book;
 
 import lombok.Getter;
 import jakarta.validation.constraints.*;
@@ -40,7 +40,7 @@ public class BookRequest {
 
     private String subcategory;
 
-    private Set<Long> categoryIds; // The IDs of the related Category entities
+    private Set<Long> categoryIds;
 
     @Size(max = 2048)
     private String urlPhoto;
