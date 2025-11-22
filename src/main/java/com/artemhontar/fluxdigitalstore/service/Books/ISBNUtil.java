@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.service;
+package com.artemhontar.fluxdigitalstore.service.Books;
 
 import org.springframework.stereotype.Service;
 

@@ -4,7 +4,7 @@ import com.artemhontar.fluxdigitalstore.api.model.Book.BookFilter;
 import com.artemhontar.fluxdigitalstore.api.model.Book.BookRequest;
 import com.artemhontar.fluxdigitalstore.exception.BookAlreadyExistsException;
 import com.artemhontar.fluxdigitalstore.model.Book;
-import com.artemhontar.fluxdigitalstore.service.BookService;
+import com.artemhontar.fluxdigitalstore.service.Books.BookService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

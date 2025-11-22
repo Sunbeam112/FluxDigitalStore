@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.service;
+package com.artemhontar.fluxdigitalstore.service.Books;
 
 import com.artemhontar.fluxdigitalstore.api.model.Book.BookRequest;
 import com.artemhontar.fluxdigitalstore.model.Author;

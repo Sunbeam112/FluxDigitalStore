@@ -49,6 +49,11 @@ public class LocalUser implements UserDetails {
     private List<VerificationToken> verificationTokens = new ArrayList<>();
 
     @JsonIgnore
+    @OneToMany(mappedBy = "localUser", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id desc")
+    private List<ResetPasswordToken> resetPasswordTokens = new ArrayList<>();
+
+    @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.emptyList();

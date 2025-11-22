@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.service;
+package com.artemhontar.fluxdigitalstore.service.User;
 
 import com.artemhontar.fluxdigitalstore.model.LocalUser;
 import com.artemhontar.fluxdigitalstore.repo.UserRepo;

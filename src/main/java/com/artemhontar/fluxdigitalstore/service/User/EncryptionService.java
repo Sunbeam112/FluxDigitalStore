@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.service;
+package com.artemhontar.fluxdigitalstore.service.User;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;

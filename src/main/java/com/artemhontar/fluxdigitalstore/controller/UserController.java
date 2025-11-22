@@ -1,7 +1,7 @@
 package com.artemhontar.fluxdigitalstore.controller;
 
 import com.artemhontar.fluxdigitalstore.model.LocalUser;
-import com.artemhontar.fluxdigitalstore.service.UserService;
+import com.artemhontar.fluxdigitalstore.service.User.AuthenticationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,10 +16,10 @@ import java.util.Optional;
 public class UserController {
 
 
-    private final UserService userService;
+    private final AuthenticationService authenticationService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
+    public UserController(AuthenticationService authenticationService) {
+        this.authenticationService = authenticationService;
     }
 
     @GetMapping("/me")
@@ -37,7 +37,7 @@ public class UserController {
         }
 
 
-        Optional<LocalUser> localUserOptional = userService.getUserByEmail(userEmail);
+        Optional<LocalUser> localUserOptional = authenticationService.getUserByEmail(userEmail);
 
         return localUserOptional.map(user -> new ResponseEntity<>(user, HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));

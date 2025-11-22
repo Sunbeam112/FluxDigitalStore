@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.service;
+package com.artemhontar.fluxdigitalstore.service.Books;
 
 import com.artemhontar.fluxdigitalstore.api.model.Book.BookFilter;
 import com.artemhontar.fluxdigitalstore.api.model.Book.BookRequest;
@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -75,4 +76,13 @@ public class BookService {
             throw new BookAlreadyExistsException("The book with ISBN " + normalizedIsbn + " already exists!");
         }
     }
+
+    public Iterable<Book> createAllBooksFromList(List<Book> books) {
+        if (books != null && !books.isEmpty()) {
+            return bookRepo.saveAll(books);
+        }
+        throw new IllegalArgumentException("List of books is empty or null!");
+    }
+
+
 }

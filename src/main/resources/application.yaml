@@ -5,7 +5,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/fluxdb
     username: postgres
-    password: postgres
+    password: tfExHHwJvql4Q51o
   jpa:
     hibernate:
       ddl-auto: create-drop

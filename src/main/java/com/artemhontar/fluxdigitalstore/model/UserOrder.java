@@ -25,7 +25,6 @@ public class UserOrder {
     @Column(name = "payment_id")
     private String paymentId;
 
-
     @Column(name = "shipment_id")
     private String shipmentId;
 
