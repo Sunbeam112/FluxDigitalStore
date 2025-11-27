@@ -17,6 +17,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder; // New Import!
 import org.springframework.stereotype.Service;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,17 +34,18 @@ public class AuthenticationService {
     private final UserRepo userRepository;
 
     private final JWTUtils jwtUtils;
-    private final EncryptionService encryptionService;
+    private final PasswordEncoder passwordEncoder;
     private final verificationTokenRepository verificationTokenRepository;
     private final EmailVerificationService emailVerificationService;
     private final RPTService rptService;
     private final ResetPasswordEmailService resetPasswordEmailService;
     private final VerificationTokenService verificationTokenService;
 
-    public AuthenticationService(UserRepo userRepository, JWTUtils jwtUtils, EncryptionService encryptionService, verificationTokenRepository verificationTokenRepository, EmailVerificationService emailVerificationService, RPTService rptService, ResetPasswordEmailService resetPasswordEmailService, VerificationTokenService verificationTokenService) {
+    // Constructor updated to inject PasswordEncoder
+    public AuthenticationService(UserRepo userRepository, JWTUtils jwtUtils, PasswordEncoder passwordEncoder, verificationTokenRepository verificationTokenRepository, EmailVerificationService emailVerificationService, RPTService rptService, ResetPasswordEmailService resetPasswordEmailService, VerificationTokenService verificationTokenService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
-        this.encryptionService = encryptionService;
+        this.passwordEncoder = passwordEncoder;
         this.verificationTokenRepository = verificationTokenRepository;
         this.emailVerificationService = emailVerificationService;
         this.rptService = rptService;
@@ -56,7 +58,8 @@ public class AuthenticationService {
         Optional<LocalUser> opUser = userRepository.findByEmailIgnoreCase(loginRequest.getEmail());
         if (opUser.isPresent()) {
             LocalUser user = opUser.get();
-            if (encryptionService.decryptPassword(loginRequest.getPassword(), user.getPassword())) {
+
+            if (passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
                 if (user.isEmailVerified()) {
                     return jwtUtils.generateToken(user.getUsername());
                 } else {
@@ -85,9 +88,9 @@ public class AuthenticationService {
         }
 
         LocalUser user = new LocalUser();
-        //TODO: ADD EMAIL ENCRYPTION
+
         user.setEmail(registrationRequest.getEmail());
-        user.setPassword(encryptionService.encryptPassword(registrationRequest.getPassword()));
+        user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
         userRepository.save(user);
 
         VerificationToken verificationToken = verificationTokenService.createVerificationToken(user);
@@ -125,7 +128,8 @@ public class AuthenticationService {
         if (opUser.isPresent()) {
             LocalUser user = opUser.get();
             if (user.isEmailVerified()) {
-                user.setPassword(encryptionService.encryptPassword(password));
+                // Replaced encryptionService.encryptPassword with passwordEncoder.encode
+                user.setPassword(passwordEncoder.encode(password));
                 userRepository.save(user);
                 return true;
             } else {
@@ -144,7 +148,7 @@ public class AuthenticationService {
                     ResetPasswordToken rpt = rptService.tryToCreateRPT(user);
                     resetPasswordEmailService.sendResetPasswordEmail(rpt);
                 } catch (EmailFailureException ex) {
-                    throw new EmailFailureException();
+                    throw new EmailFailureException(ex.getMessage());
                 } catch (PasswordResetCooldown ex) {
                     throw new PasswordResetCooldown();
                 }
@@ -191,6 +195,18 @@ public class AuthenticationService {
 
     public Optional<LocalUser> getUserByEmail(String email) {
         return userRepository.findByEmailIgnoreCase(email);
+    }
+
+
+    /**
+     * Checks if the currently authenticated user possesses the 'ADMIN' authority/role.
+     * This is used for privilege escalation and security bypass checks.
+     *
+     * @return true if the user has the 'ADMIN' role, false otherwise.
+     */
+    public boolean isAdmin() {
+        return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 
 

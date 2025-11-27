@@ -1,5 +1,6 @@
 package com.artemhontar.fluxdigitalstore.model;
 
+import com.artemhontar.fluxdigitalstore.model.enums.ORDER_STATUS;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -42,7 +43,10 @@ public class UserOrder {
     private Long userId;
 
     @Column(name = "status", length = 32)
-    private String status;
+    private ORDER_STATUS status;
 
+    @OneToOne(optional = false, orphanRemoval = true)
+    @JoinColumn(name = "delivery_address_id", nullable = false)
+    private DeliveryAddress deliveryAddress;
 
 }

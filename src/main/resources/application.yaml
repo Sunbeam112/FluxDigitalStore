@@ -45,7 +45,7 @@ rpt:
 
 encryption:
   salt:
-    rounds: 10
+
 
 email:
   from: store@fluxdigital.com

@@ -245,3 +245,15 @@ VALUES (1, 1),
        (32, 1),
        (33, 13),
        (33, 11);
+
+--
+-- *** 6. LOCAL_USER INSERTS (Test Users) ***
+--
+-- Note: Passwords must be encoded (e.g., BCrypt). The hash below is for the plain password 'password'.
+-- Hash for 'password' (BCrypt): $2a$10$i1.Q.F2G.0.T1yB.rT/Q.t2.h3/5o.j5.t2G.7E.h6.p2.5/2.L8
+
+INSERT INTO local_user (email, is_email_verified, password)
+VALUES ('test1@mail.com', FALSE, '$2a$10$8uO1CjIwLoc0xniGfbUCwOs64gt./FEf0utOHAAc.sHocSxbwVuVO'), -- Unverified User
+       ('test2@mail.com', TRUE, '$2a$10$8uO1CjIwLoc0xniGfbUCwOs64gt./FEf0utOHAAc.sHocSxbwVuVO'),  -- Verified User
+       ('admin@mail.com', TRUE,
+        '$2a$10$8uO1CjIwLoc0xniGfbUCwOs64gt./FEf0utOHAAc.sHocSxbwVuVO'); -- Verified User (e.g., Admin)
