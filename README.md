@@ -18,12 +18,6 @@
 * **Client**: **Fake-SMTP**
 * **Details**: Utilized for simulating email sending during development and testing phases, ensuring email-related functionalities (like email verification and password reset) work correctly without sending actual emails.
 
-### Frontend Integration
-* **Technology**: **React**
-* **Details**: The backend application serves as an API for a separate **React front-end project**, handling all data processing, business logic, and database interactions.
-
----
-
 ## User Management
 
 These functionalities cover user account creation, authentication, and password recovery.
@@ -48,30 +42,31 @@ These functionalities cover user account creation, authentication, and password 
 * **Purpose**: Allows users to set a new password after initiating a "forgot password" request.
 * **Details**: Users utilize the **Reset Password Token (RPT)** received via email to access a secure endpoint where they can input and confirm their new password. The system then **updates their hashed password** using the **EncryptionService** and invalidates the used RPT.
 
+## Book Management 
+
+These functionalities enable administrators or authorized users to manage **books** available in the store.
+
 ---
 
-## Product Management
+### Add Book
+* **Purpose**: Creates new book entries in the database.
+* **Details**: Involves capturing information such as **title**, **description**, **short description**, **ISBN**, **price**, **publication year**, and linking to existing **authors** and **categories**. Includes validation to ensure data integrity (e.g., ensuring the ISBN is unique and properly formatted).
 
-These functionalities enable administrators or authorized users to manage products available in the store.
+### Update Book
+* **Purpose**: Modifies details of an existing book.
+* **Details**: Takes a **book ID** and updated data as input. Allows administrators to correct typos, change the price, update the description, or modify the author/category associations.
 
-### Add Product
-* **Purpose**: Creates new product entries in the database.
-* **Details**: Involves capturing information such as **product name**, **description**, **price**, **category**, and **stock quantity**. Includes validation to ensure data integrity.
+### Delete Book
+* **Purpose**: Removes an existing book from the store's inventory.
+* **Details**: Takes a **book ID** as input. May include checks to ensure the book isn't tied to active orders or reviews before deletion.
 
-### Delete Product
-* **Purpose**: Removes an existing product from the store's inventory.
-* **Details**: Takes a **product ID** as input. May include checks to ensure the product isn't tied to active orders before deletion.
-
-### Get Product by (Name, Category, ID)
-* **Purpose**: Provides various methods for retrieving product information.
+### Get Book by (Title, Category, ID, ISBN)
+* **Purpose**: Provides various methods for retrieving book information for display or internal use.
 * **Details**:
-    * **By Name**: Searches and retrieves products matching a given name (can support partial matches).
-    * **By Category**: Retrieves all products belonging to a specific category.
-    * **By ID**: Retrieves a single, specific product using its unique identifier.
-
-### Parse and Export Products to CSV
-* **Purpose**: Utility for data management and reporting.
-* **Details**: Generates a **CSV (Comma Separated Values)** file containing selected or all product data. This is useful for inventory tracking, analysis, or transferring data to other systems. 
+    * **By Title**: Searches and retrieves books matching a given title (can support partial or full matches).
+    * **By Category**: Retrieves all books belonging to a specific category or subcategory.
+    * **By ID**: Retrieves a single, specific book using its unique identifier.
+    * **By ISBN**: Retrieves a single book using its unique International Standard Book Number.
 
 ---
 
