@@ -2,9 +2,9 @@ package com.artemhontar.fluxdigitalstore.controller;
 
 import com.artemhontar.fluxdigitalstore.api.model.User.UserOrderRequest;
 import com.artemhontar.fluxdigitalstore.exception.NotEnoughStock;
+import com.artemhontar.fluxdigitalstore.exception.NotFoundException;
 import com.artemhontar.fluxdigitalstore.exception.PaymentFailedException;
 import com.artemhontar.fluxdigitalstore.exception.UnauthorizedAccessException;
-import com.artemhontar.fluxdigitalstore.exception.UserNotExistsException;
 import com.artemhontar.fluxdigitalstore.model.UserOrder;
 import com.artemhontar.fluxdigitalstore.service.OrderService;
 import jakarta.validation.Valid;
@@ -43,7 +43,7 @@ public class OrderController {
             UserOrder createdOrder = orderService.createOrder(orderRequest);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder);
 
-        } catch (UserNotExistsException e) {
+        } catch (NotFoundException e) {
             // User is not authenticated.
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated or logged in.", e);
 
@@ -73,7 +73,7 @@ public class OrderController {
             List<UserOrder> orders = orderService.getOrdersForCurrentUser();
             return ResponseEntity.ok(orders);
 
-        } catch (UserNotExistsException e) {
+        } catch (NotFoundException e) {
             // Thrown if the current user cannot be identified.
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated or logged in.", e);
         }

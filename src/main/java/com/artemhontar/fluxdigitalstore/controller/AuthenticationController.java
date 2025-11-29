@@ -5,9 +5,7 @@ import com.artemhontar.fluxdigitalstore.api.model.User.LoginResponse;
 import com.artemhontar.fluxdigitalstore.api.model.User.PasswordResetRequest;
 import com.artemhontar.fluxdigitalstore.api.model.User.RegistrationRequest;
 import com.artemhontar.fluxdigitalstore.exception.*;
-import com.artemhontar.fluxdigitalstore.model.ResetPasswordToken;
 import com.artemhontar.fluxdigitalstore.service.User.AuthenticationService;
-import com.artemhontar.fluxdigitalstore.service.User.RPTService;
 import com.artemhontar.fluxdigitalstore.service.ValidationErrorsParser;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -15,8 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -26,16 +22,12 @@ public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
     private final ValidationErrorsParser validationErrorsParser;
-    private final RPTService rPTService;
 
-    public AuthenticationController(AuthenticationService authenticationService, ValidationErrorsParser validationErrorsParser, RPTService rPTService) {
+    public AuthenticationController(AuthenticationService authenticationService, ValidationErrorsParser validationErrorsParser) {
         this.authenticationService = authenticationService;
         this.validationErrorsParser = validationErrorsParser;
-        this.rPTService = rPTService;
     }
 
-
-    @PostMapping("/register")
     /**
      * Registers a new user in the system.
      *
@@ -47,6 +39,7 @@ public class AuthenticationController {
      * - HttpStatus.INTERNAL_SERVER_ERROR (500) if there's an issue sending the verification email.
      * - HttpStatus.BAD_REQUEST (400) if the provided details are not valid.
      */
+    @PostMapping("/register")
     public ResponseEntity<Object> registerUser
             (@Valid @RequestBody RegistrationRequest registrationRequest, BindingResult result) {
         try {
@@ -141,18 +134,15 @@ public class AuthenticationController {
      */
     @PostMapping("/forgot_password")
     public ResponseEntity<Object> forgotPassword(@RequestParam @NotBlank String email) {
-        if (!authenticationService.isUserExistsByEmail(email)) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
         try {
             authenticationService.trySendResetPasswordEmail(email);
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (EmailsNotVerifiedException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("EMAIL_NOT_VERIFIED");
-        } catch (EmailFailureException e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (PasswordResetCooldown e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("PASSWORD_RESET_COOLDOWN");
+        } catch (EmailFailureException e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -170,40 +160,23 @@ public class AuthenticationController {
      */
     @PostMapping("/reset_password")
     public ResponseEntity<Object> changeUserPassword(@Valid @RequestBody PasswordResetRequest resetBody, BindingResult result) {
-        Optional<ResetPasswordToken> opToken = rPTService.verifyAndGetRPT(resetBody.getToken());
-
-        if (opToken.isPresent()) {
-            ResetPasswordToken token = opToken.get();
-            try {
-
-                boolean isPasswordChanged = authenticationService.setUserPasswordByEmail(
-                        token.getLocalUser().getEmail(), resetBody.getNewPassword(), result);
-
-                if (result.hasErrors()) {
-
-                    throw new DetaiIsNotVerified(validationErrorsParser.parseErrorsFrom(result));
-                }
-
-                if (isPasswordChanged) {
-
-                    rPTService.markTokenAsUsed(token);
-                    return new ResponseEntity<>(HttpStatus.OK);
-                } else {
-
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("PASSWORD_CHANGE_FAILED");
-                }
-
-            } catch (EmailsNotVerifiedException e) {
-
-                return ResponseEntity.status(HttpStatus.CONFLICT).body("EMAIL_NOT_VERIFIED");
-            } catch (DetaiIsNotVerified e) {
-                return ResponseEntity.badRequest().body(e.getErrors());
-            } catch (Exception e) {
-                System.err.println("Error during password reset: " + e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("AN_UNEXPECTED_ERROR_OCCURRED");
-            }
-        } else {
+        try {
+            authenticationService.resetUserPassword(resetBody, result);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (InvalidTokenException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("INVALID_OR_EXPIRED_TOKEN");
+        } catch (EmailsNotVerifiedException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("EMAIL_NOT_VERIFIED");
+        } catch (DetaiIsNotVerified e) {
+            // This exception is now specifically for password validation errors
+            return ResponseEntity.badRequest().body(e.getErrors());
+        } catch (PasswordChangeFailedException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("PASSWORD_CHANGE_FAILED");
+        } catch (Exception e) {
+            // Catch-all for any other unexpected errors
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("AN_UNEXPECTED_ERROR_OCCURRED");
         }
     }
+
+
 }

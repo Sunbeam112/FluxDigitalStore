@@ -156,7 +156,7 @@ class OrderServiceTest {
         when(authenticationService.tryGetCurrentUser()).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(UserNotExistsException.class, () -> {
+        assertThrows(NotFoundException.class, () -> {
             orderService.createOrder(mockRequest);
         });
 
@@ -221,7 +221,7 @@ class OrderServiceTest {
         when(authenticationService.tryGetCurrentUser()).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(UserNotExistsException.class, () -> {
+        assertThrows(NotFoundException.class, () -> {
             orderService.getOrdersForCurrentUser();
         });
 

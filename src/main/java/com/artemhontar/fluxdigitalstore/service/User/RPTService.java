@@ -18,15 +18,15 @@ import java.util.UUID;
 public class RPTService {
     @Value("${rpt.expiry_in_msec}")
     private int tokenExpiryInMillisecond;
-    private final RPTRepository rtpRepository;
+    private final RPTRepository rptRepository;
 
     /**
      * Constructs an RPTService with the given ResetPasswordTokenRepository.
      *
-     * @param rtpRepository The repository for managing ResetPasswordToken entities.
+     * @param rptRepository The repository for managing ResetPasswordToken entities.
      */
-    public RPTService(RPTRepository rtpRepository) {
-        this.rtpRepository = rtpRepository;
+    public RPTService(RPTRepository rptRepository) {
+        this.rptRepository = rptRepository;
     }
 
     /**
@@ -52,7 +52,7 @@ public class RPTService {
             if (token.getIsTokenUsed()) {
                 return Optional.empty();
             }
-            if (!isRTPNotExpired(token)) {
+            if (!isRPTNotExpired(token)) {
                 return Optional.empty();
             }
             LocalUser user = token.getLocalUser();
@@ -74,7 +74,7 @@ public class RPTService {
     public void markTokenAsUsed(ResetPasswordToken token) {
         if (token != null) {
             token.setIsTokenUsed(true);
-            rtpRepository.save(token);
+            rptRepository.save(token);
         }
     }
 
@@ -117,9 +117,9 @@ public class RPTService {
         }
 
         // If no tokens or cooldown has passed, generate a new one
-        ResetPasswordToken rtp = generateRPT(user);
-        user.getResetPasswordTokens().add(rtp);
-        return rtp;
+        ResetPasswordToken rpt = generateRPT(user);
+        user.getResetPasswordTokens().add(rpt);
+        return rpt;
     }
 
     /**
@@ -137,7 +137,7 @@ public class RPTService {
         Optional<ResetPasswordToken> opToken = getTokenByString(tokenInput);
         if (opToken.isPresent()) {
             ResetPasswordToken token = opToken.get();
-            if (token.getIsTokenUsed() || !isRTPNotExpired(token)) {
+            if (token.getIsTokenUsed() || !isRPTNotExpired(token)) {
                 return false;
             }
             LocalUser user = opToken.get().getLocalUser();
@@ -161,11 +161,11 @@ public class RPTService {
         rpt.setExpiryDateInMilliseconds(new Timestamp(System.currentTimeMillis() + tokenExpiryInMillisecond));
         rpt.setLocalUser(user);
         rpt.setToken(UUID.randomUUID().toString());
-        rtpRepository.save(rpt);
+        rptRepository.save(rpt);
         return rpt;
     }
 
-    private boolean isRTPNotExpired(ResetPasswordToken resetPasswordToken) {
+    private boolean isRPTNotExpired(ResetPasswordToken resetPasswordToken) {
         if (resetPasswordToken == null || resetPasswordToken.getExpiryDateInMilliseconds() == null) {
             return false;
         }
@@ -182,7 +182,7 @@ public class RPTService {
      * @throws IllegalArgumentException If the provided token string is null (though the method doesn't explicitly check).
      */
     public Optional<ResetPasswordToken> getTokenByString(String token) throws IllegalArgumentException {
-        return Optional.ofNullable(rtpRepository.getByTokenIgnoreCase(token));
+        return Optional.ofNullable(rptRepository.getByTokenIgnoreCase(token));
     }
 
 
@@ -193,8 +193,8 @@ public class RPTService {
      * @param token The {@link ResetPasswordToken} to be removed.
      */
     public void removeToken(ResetPasswordToken token) {
-        if (rtpRepository.existsById(token.getId()))
-            rtpRepository.delete(token);
+        if (rptRepository.existsById(token.getId()))
+            rptRepository.delete(token);
     }
 
 

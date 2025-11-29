@@ -21,6 +21,13 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for the {@code InventoryService} class.
+ * These tests ensure the core inventory management operations—checking stock,
+ * reserving stock for orders, and dispatching stock—behave correctly, including
+ * handling success cases and specific business exceptions like {@code InventoryNotFound}
+ * and {@code NotEnoughStock}.
+ */
 @ExtendWith(MockitoExtension.class)
 class InventoryServiceTest {
 
@@ -43,16 +50,17 @@ class InventoryServiceTest {
     private Book mockBook;
     private Inventory mockInventory;
 
+    /**
+     * Sets up the necessary mock entities and initial inventory state before each test.
+     */
     @BeforeEach
     void setUp() {
-        // Create a mock Book entity for use within Inventory
         mockBook = Book.builder()
                 .id(BOOK_ID)
                 .isbn("1234567890123")
                 .title("Test Book Title")
                 .build();
 
-        // Create a mock Inventory with initial stock levels
         mockInventory = Inventory.builder()
                 .id(BOOK_ID)
                 .book(mockBook)
@@ -65,32 +73,34 @@ class InventoryServiceTest {
     // TEST: getAvailableStock(Long bookID)
     // ===================================
 
+    /**
+     * Tests that {@code getAvailableStock} returns the correct warehouse stock level
+     * when the inventory record is found.
+     */
     @Test
     void getAvailableStock_InventoryFound_ReturnsWarehouseStock() {
-        // Arrange
         when(inventoryRepository.findById(BOOK_ID)).thenReturn(Optional.of(mockInventory));
         int expectedStock = mockInventory.getWarehouseStock();
 
-        // Act
         int actualStock = inventoryService.getAvailableStock(BOOK_ID);
 
-        // Assert
         assertEquals(expectedStock, actualStock);
         verify(inventoryRepository, times(1)).findById(BOOK_ID);
     }
 
+    /**
+     * Tests that {@code getAvailableStock} throws {@code InventoryNotFound}
+     * when the inventory record for the given book ID does not exist.
+     */
     @Test
     void getAvailableStock_InventoryNotFound_ThrowsException() {
-        // Arrange
         when(inventoryRepository.findById(BOOK_ID)).thenReturn(Optional.empty());
 
-        // Act & Assert
         InventoryNotFound exception = assertThrows(InventoryNotFound.class, () -> {
             inventoryService.getAvailableStock(BOOK_ID);
         });
 
-        // FIX: Ensure the message is not null before checking its content
-        assertNotNull(exception.getMessage(), "Exception message should not be null.");
+        assertNotNull(exception.getMessage());
         assertTrue(exception.getMessage().contains("Inventory not found for Book ID: " + BOOK_ID));
     }
 
@@ -98,32 +108,35 @@ class InventoryServiceTest {
     // TEST: reserveStock(Long bookId, int quantity, Long orderId)
     // ===================================
 
+    /**
+     * Tests successful reservation of stock, ensuring {@code warehouseStock} decreases,
+     * {@code onHoldStock} increases, and the repository save method is called.
+     */
     @Test
     void reserveStock_SufficientStock_ReservesAndSavesInventory() {
-        // Arrange
         int reserveQuantity = 3;
-        int initialWarehouseStock = mockInventory.getWarehouseStock(); // 10
-        int initialOnHoldStock = mockInventory.getOnHoldStock();       // 5
+        int initialWarehouseStock = mockInventory.getWarehouseStock();
+        int initialOnHoldStock = mockInventory.getOnHoldStock();
 
         when(inventoryRepository.findById(BOOK_ID)).thenReturn(Optional.of(mockInventory));
         when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
 
-        // Act
         Inventory result = inventoryService.reserveStock(BOOK_ID, reserveQuantity, ORDER_ID);
 
-        // Assert
-        assertEquals(initialWarehouseStock - reserveQuantity, result.getWarehouseStock()); // 10 - 3 = 7
-        assertEquals(initialOnHoldStock + reserveQuantity, result.getOnHoldStock());     // 5 + 3 = 8
+        assertEquals(initialWarehouseStock - reserveQuantity, result.getWarehouseStock());
+        assertEquals(initialOnHoldStock + reserveQuantity, result.getOnHoldStock());
         verify(inventoryRepository, times(1)).save(mockInventory);
     }
 
+    /**
+     * Tests that {@code reserveStock} throws {@code InventoryNotFound}
+     * when the inventory record is missing.
+     */
     @Test
     void reserveStock_InventoryNotFound_ThrowsException() {
-        // Arrange
         int reserveQuantity = 3;
         when(inventoryRepository.findById(BOOK_ID)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThrows(InventoryNotFound.class, () -> {
             inventoryService.reserveStock(BOOK_ID, reserveQuantity, ORDER_ID);
         });
@@ -131,18 +144,19 @@ class InventoryServiceTest {
         verify(inventoryRepository, never()).save(any());
     }
 
+    /**
+     * Tests that {@code reserveStock} throws {@code IllegalArgumentException}
+     * when the requested quantity exceeds the available {@code warehouseStock}.
+     */
     @Test
     void reserveStock_InsufficientStock_ThrowsIllegalArgumentException() {
-        // Arrange
-        int reserveQuantity = 11; // More than available stock (10)
+        int reserveQuantity = 11;
         when(inventoryRepository.findById(BOOK_ID)).thenReturn(Optional.of(mockInventory));
 
-        // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             inventoryService.reserveStock(BOOK_ID, reserveQuantity, ORDER_ID);
         });
 
-        // The IllegalArgumentException message should contain the expected text
         assertTrue(exception.getMessage().contains("Insufficient stock available for book ID: " + BOOK_ID));
         verify(inventoryRepository, never()).save(any());
     }
@@ -151,37 +165,37 @@ class InventoryServiceTest {
     // TEST: dispatchStock(Long bookId, int quantity, Long orderId, Long deliveryAddressId)
     // ===================================
 
+    /**
+     * Tests successful dispatch of stock, ensuring {@code onHoldStock} decreases,
+     * {@code logDispatchService} is called, and the inventory is saved.
+     */
     @Test
     void dispatchStock_SufficientOnHoldStock_DispatchesAndSavesInventory() {
-        // Arrange
         int dispatchQuantity = 5;
-        int initialOnHoldStock = mockInventory.getOnHoldStock(); // 5
+        int initialOnHoldStock = mockInventory.getOnHoldStock();
 
         when(inventoryRepository.findById(BOOK_ID)).thenReturn(Optional.of(mockInventory));
         doNothing().when(logDispatchService).logDispatch(any(Book.class), anyInt(), anyLong(), anyLong());
         when(inventoryRepository.save(any(Inventory.class))).thenReturn(mockInventory);
 
-        // Act
         inventoryService.dispatchStock(BOOK_ID, dispatchQuantity, ORDER_ID, DELIVERY_ADDRESS_ID);
 
-        // Assert
-        // The onHoldStock should now be 0 (5 - 5)
         assertEquals(initialOnHoldStock - dispatchQuantity, mockInventory.getOnHoldStock());
 
-        // Verify LogDispatchService was called with correct parameters
         verify(logDispatchService, times(1)).logDispatch(mockBook, dispatchQuantity, ORDER_ID, DELIVERY_ADDRESS_ID);
 
-        // Verify repository save was called
         verify(inventoryRepository, times(1)).save(mockInventory);
     }
 
+    /**
+     * Tests that {@code dispatchStock} throws {@code InventoryNotFound}
+     * when the inventory record is missing.
+     */
     @Test
     void dispatchStock_InventoryNotFound_ThrowsException() {
-        // Arrange
         int dispatchQuantity = 1;
         when(inventoryRepository.findById(BOOK_ID)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThrows(InventoryNotFound.class, () -> {
             inventoryService.dispatchStock(BOOK_ID, dispatchQuantity, ORDER_ID, DELIVERY_ADDRESS_ID);
         });
@@ -190,19 +204,20 @@ class InventoryServiceTest {
         verify(inventoryRepository, never()).save(any());
     }
 
+    /**
+     * Tests that {@code dispatchStock} throws {@code NotEnoughStock}
+     * when the requested quantity exceeds the available {@code onHoldStock}.
+     */
     @Test
     void dispatchStock_InsufficientOnHoldStock_ThrowsNotEnoughStockException() {
-        // Arrange
-        int dispatchQuantity = 6; // More than available on-hold stock (5)
+        int dispatchQuantity = 6;
         when(inventoryRepository.findById(BOOK_ID)).thenReturn(Optional.of(mockInventory));
 
-        // Act & Assert
         NotEnoughStock exception = assertThrows(NotEnoughStock.class, () -> {
             inventoryService.dispatchStock(BOOK_ID, dispatchQuantity, ORDER_ID, DELIVERY_ADDRESS_ID);
         });
 
-        // FIX: Ensure the message is not null before checking its content
-        assertNotNull(exception.getMessage(), "Exception message should not be null.");
+        assertNotNull(exception.getMessage());
         assertTrue(exception.getMessage().contains("Insufficient ON_HOLD stock for book ID: " + BOOK_ID));
         verify(logDispatchService, never()).logDispatch(any(), anyInt(), anyLong(), anyLong());
         verify(inventoryRepository, never()).save(any());
