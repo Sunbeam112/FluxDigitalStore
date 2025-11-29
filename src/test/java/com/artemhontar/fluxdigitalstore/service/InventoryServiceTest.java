@@ -6,6 +6,8 @@ import com.artemhontar.fluxdigitalstore.model.Book;
 import com.artemhontar.fluxdigitalstore.model.Inventory;
 import com.artemhontar.fluxdigitalstore.repo.InventoryRepository;
 import com.artemhontar.fluxdigitalstore.service.Books.BookService;
+import com.artemhontar.fluxdigitalstore.service.Order.InventoryService;
+import com.artemhontar.fluxdigitalstore.service.Order.LogDispatchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

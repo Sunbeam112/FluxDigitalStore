@@ -1,12 +1,14 @@
 package com.artemhontar.fluxdigitalstore.controller;
 
+import com.artemhontar.fluxdigitalstore.api.model.Order.OrderDTO;
 import com.artemhontar.fluxdigitalstore.api.model.User.UserOrderRequest;
 import com.artemhontar.fluxdigitalstore.exception.NotEnoughStock;
 import com.artemhontar.fluxdigitalstore.exception.NotFoundException;
 import com.artemhontar.fluxdigitalstore.exception.PaymentFailedException;
 import com.artemhontar.fluxdigitalstore.exception.UnauthorizedAccessException;
 import com.artemhontar.fluxdigitalstore.model.UserOrder;
-import com.artemhontar.fluxdigitalstore.service.OrderService;
+import com.artemhontar.fluxdigitalstore.service.Order.OrderConverter;
+import com.artemhontar.fluxdigitalstore.service.Order.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Controller for handling user order operations.
@@ -24,9 +27,11 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final OrderConverter orderConverter;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, OrderConverter orderConverter) {
         this.orderService = orderService;
+        this.orderConverter = orderConverter;
     }
 
     /**
@@ -34,14 +39,14 @@ public class OrderController {
      * and persist the order record.
      *
      * @param orderRequest The request body containing order items and delivery details.
-     * @return A ResponseEntity containing the created UserOrder object and HTTP Status 201.
+     * @return A ResponseEntity containing the created OrderDTO object and HTTP Status 201.
      */
     @PostMapping("/create")
-    public ResponseEntity<UserOrder> createOrder(@Valid @RequestBody UserOrderRequest orderRequest) {
+    public ResponseEntity<OrderDTO> createOrder(@Valid @RequestBody UserOrderRequest orderRequest) {
         try {
-            // Service handles payment, reservation, and status updates.
             UserOrder createdOrder = orderService.createOrder(orderRequest);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder);
+            OrderDTO orderDTO = orderConverter.convertToDto(createdOrder);
+            return ResponseEntity.status(HttpStatus.CREATED).body(orderDTO);
 
         } catch (NotFoundException e) {
             // User is not authenticated.
@@ -64,14 +69,19 @@ public class OrderController {
     /**
      * Retrieves the list of all orders associated with the currently authenticated user.
      *
-     * @return A ResponseEntity containing a list of UserOrder objects.
+     * @return A ResponseEntity containing a list of OrderDTO objects.
      */
     @GetMapping
-    public ResponseEntity<List<UserOrder>> getOrdersForCurrentUser() {
+    public ResponseEntity<List<OrderDTO>> getOrdersForCurrentUser() {
         try {
-            // Service handles authentication check and data retrieval.
+            // Service returns the list of entities.
             List<UserOrder> orders = orderService.getOrdersForCurrentUser();
-            return ResponseEntity.ok(orders);
+            // Convert list of entities to list of DTOs.
+            List<OrderDTO> orderDTOs = orders.stream()
+                    .map(orderConverter::convertToDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(orderDTOs);
 
         } catch (NotFoundException e) {
             // Thrown if the current user cannot be identified.
@@ -84,22 +94,23 @@ public class OrderController {
      * by checking if the user is the order owner or has the ADMIN role.
      *
      * @param orderId The ID of the order to dispatch.
-     * @return A ResponseEntity containing the dispatched UserOrder object.
+     * @return A ResponseEntity containing the dispatched OrderDTO object.
      */
     @PostMapping("/dispatch/{orderId}")
-    public ResponseEntity<UserOrder> dispatchOrder(@PathVariable Long orderId) {
+    public ResponseEntity<OrderDTO> dispatchOrder(@PathVariable Long orderId) {
         try {
-            // Service performs security checks, status validation, and stock update.
+            // Service returns the updated entity.
             UserOrder dispatchedOrder = orderService.dispatchOrder(orderId);
-            return ResponseEntity.ok(dispatchedOrder);
+            // Convert the updated entity to DTO.
+            OrderDTO orderDTO = orderConverter.convertToDto(dispatchedOrder);
+            return ResponseEntity.ok(orderDTO);
 
         } catch (UnauthorizedAccessException e) {
             // Thrown if the user is not the owner AND not an admin.
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, e.getMessage(), e); // 403 Forbidden
 
         } catch (IllegalArgumentException e) {
-            // Thrown if the order is not found (404 Not Found).
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found with ID: " + orderId, e);
+            throw new ResponseStatusException(HttpStatus.NO_CONTENT, "Order not found with ID: " + orderId, e);
 
         } catch (IllegalStateException e) {
             // Thrown if the order is not in PROCESSING status or stock inconsistency is detected (400 Bad Request).

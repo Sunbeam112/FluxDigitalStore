@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.service;
+package com.artemhontar.fluxdigitalstore.service.Order;
 
 import com.artemhontar.fluxdigitalstore.exception.InventoryNotFound;
 import com.artemhontar.fluxdigitalstore.exception.NotEnoughStock;

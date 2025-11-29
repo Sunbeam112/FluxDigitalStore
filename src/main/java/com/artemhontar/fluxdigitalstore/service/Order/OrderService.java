@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.service;
+package com.artemhontar.fluxdigitalstore.service.Order;
 
 import com.artemhontar.fluxdigitalstore.api.model.User.UserOrderRequest;
 import com.artemhontar.fluxdigitalstore.exception.*;
@@ -23,7 +23,7 @@ import java.util.Optional;
  * including creation, payment processing, inventory reservation, and dispatch.
  */
 @Service
-@Slf4j // Add Lombok logging annotation
+@Slf4j
 public class OrderService {
 
 
@@ -32,8 +32,7 @@ public class OrderService {
     private final OrderRepo orderRepo;
     private final InventoryService inventoryService;
 
-
-    public OrderService(FinanceService financeService, AuthenticationService authenticationService, OrderRepo orderRepo, InventoryService inventoryService, UserRepo userRepo) {
+    public OrderService(FinanceService financeService, AuthenticationService authenticationService, OrderRepo orderRepo, InventoryService inventoryService) {
         this.financeService = financeService;
         this.authenticationService = authenticationService;
         this.orderRepo = orderRepo;

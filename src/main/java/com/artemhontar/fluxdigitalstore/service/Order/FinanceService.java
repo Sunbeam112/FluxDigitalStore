@@ -1,8 +1,7 @@
-package com.artemhontar.fluxdigitalstore.service;
+package com.artemhontar.fluxdigitalstore.service.Order;
 
 import com.artemhontar.fluxdigitalstore.api.model.User.UserOrderRequest;
 import com.artemhontar.fluxdigitalstore.exception.FinancialOperationException;
-import com.artemhontar.fluxdigitalstore.exception.PaymentFailedException;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;

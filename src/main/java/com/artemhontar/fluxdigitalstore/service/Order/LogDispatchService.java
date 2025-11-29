@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.service;
+package com.artemhontar.fluxdigitalstore.service.Order;
 
 import com.artemhontar.fluxdigitalstore.model.Book;
 import com.artemhontar.fluxdigitalstore.model.DispatchLog;
@@ -17,7 +17,7 @@ public class LogDispatchService {
         this.dispatchLogRepository = dispatchLogRepository;
     }
 
-    void logDispatch(Book book, int quantity, Long orderId, Long deliveryAddressId) {
+    public void logDispatch(Book book, int quantity, Long orderId, Long deliveryAddressId) {
 
         // 1. Create the Log Entity
         DispatchLog log = new DispatchLog();
