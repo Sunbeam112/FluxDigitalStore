@@ -5,11 +5,13 @@ import com.artemhontar.fluxdigitalstore.api.model.User.PasswordResetRequest;
 import com.artemhontar.fluxdigitalstore.api.model.User.RegistrationRequest;
 import com.artemhontar.fluxdigitalstore.api.security.JWTUtils;
 import com.artemhontar.fluxdigitalstore.exception.*;
+import com.artemhontar.fluxdigitalstore.model.Authority;
 import com.artemhontar.fluxdigitalstore.model.LocalUser;
 import com.artemhontar.fluxdigitalstore.model.ResetPasswordToken;
 import com.artemhontar.fluxdigitalstore.model.VerificationToken;
-import com.artemhontar.fluxdigitalstore.repo.UserRepo;
-import com.artemhontar.fluxdigitalstore.repo.verificationTokenRepository;
+import com.artemhontar.fluxdigitalstore.model.repo.AuthorityRepository;
+import com.artemhontar.fluxdigitalstore.model.repo.UserRepo;
+import com.artemhontar.fluxdigitalstore.model.repo.VerificationTokenRepository;
 import com.artemhontar.fluxdigitalstore.service.Email.EmailVerificationService;
 import com.artemhontar.fluxdigitalstore.service.Email.ResetPasswordEmailService;
 import com.artemhontar.fluxdigitalstore.service.ValidationErrorsParser;
@@ -19,6 +21,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.extern.slf4j.Slf4j; // Required import for logging
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,8 +29,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.sql.Timestamp;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Service class responsible for core user authentication and management features,
@@ -43,26 +45,16 @@ public class AuthenticationService {
     private final UserRepo userRepository;
     private final JWTUtils jwtUtils;
     private final PasswordEncoder passwordEncoder;
-    private final verificationTokenRepository verificationTokenRepository;
+    private final VerificationTokenRepository verificationTokenRepository;
     private final EmailVerificationService emailVerificationService;
     private final RPTService rptService;
     private final ResetPasswordEmailService resetPasswordEmailService;
     private final VerificationTokenService verificationTokenService;
     private final ValidationErrorsParser validationErrorsParser;
+    private final AuthorityRepository authorityRepository;
 
-    /**
-     * Constructs the AuthenticationService with all necessary dependencies.
-     *
-     * @param userRepository              The repository for managing {@link LocalUser} entities.
-     * @param jwtUtils                    The utility for generating JWT tokens.
-     * @param passwordEncoder             The Spring Security component for password hashing and verification.
-     * @param verificationTokenRepository The repository for managing {@link VerificationToken} entities.
-     * @param emailVerificationService    The service for sending email verification messages.
-     * @param rptService                  The service for managing {@link ResetPasswordToken} entities.
-     * @param resetPasswordEmailService   The service for sending reset password emails.
-     * @param verificationTokenService    The service for creating verification tokens.
-     */
-    public AuthenticationService(UserRepo userRepository, JWTUtils jwtUtils, PasswordEncoder passwordEncoder, verificationTokenRepository verificationTokenRepository, EmailVerificationService emailVerificationService, RPTService rptService, ResetPasswordEmailService resetPasswordEmailService, VerificationTokenService verificationTokenService, ValidationErrorsParser validationErrorsParser) {
+
+    public AuthenticationService(UserRepo userRepository, JWTUtils jwtUtils, PasswordEncoder passwordEncoder, VerificationTokenRepository verificationTokenRepository, EmailVerificationService emailVerificationService, RPTService rptService, ResetPasswordEmailService resetPasswordEmailService, VerificationTokenService verificationTokenService, ValidationErrorsParser validationErrorsParser, AuthorityRepository authorityRepository) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.passwordEncoder = passwordEncoder;
@@ -72,6 +64,7 @@ public class AuthenticationService {
         this.rptService = rptService;
         this.resetPasswordEmailService = resetPasswordEmailService;
         this.verificationTokenService = verificationTokenService;
+        this.authorityRepository = authorityRepository;
     }
 
 
@@ -127,29 +120,60 @@ public class AuthenticationService {
      * Registers a new user, hashes the password, and initiates the email verification process.
      *
      * @param registrationRequest The DTO containing the user's registration details (email, password).
-     * @param bindingResult       The result object for validation errors (though not actively used for throwing exceptions).
+     * @param bindingResult       The result object for validation errors (retained for method signature compatibility).
      * @throws UserAlreadyExist      If a user with the provided email already exists.
      * @throws EmailFailureException If there is an issue sending the initial verification email.
+     * @throws RuntimeException      If the default role ('ROLE_USER') cannot be found in the database.
      */
+    // Inside com.artemhontar.fluxdigitalstore.service.User.AuthenticationService
     @Transactional
     public void registerUser(@Valid @RequestBody RegistrationRequest registrationRequest, BindingResult bindingResult) throws UserAlreadyExist, EmailFailureException {
+        final String DEFAULT_ROLE_NAME = "ROLE_USER";
+
         log.info("Attempting to register user with email: {}", registrationRequest.getEmail());
-        Optional<LocalUser> opUser = userRepository.findByEmailIgnoreCase(registrationRequest.getEmail());
-        if (opUser.isPresent()) {
+
+        // 1. Check for existing user
+        if (userRepository.findByEmailIgnoreCase(registrationRequest.getEmail()).isPresent()) {
             log.warn("Registration failed: User already exists with email: {}", registrationRequest.getEmail());
             throw new UserAlreadyExist();
         }
 
-        LocalUser user = new LocalUser();
+        // 2. Load the default Authority (Role)
+        Optional<Authority> opDefaultRole = authorityRepository.findByAuthorityName(DEFAULT_ROLE_NAME);
 
+        if (opDefaultRole.isEmpty()) {
+            log.error("FATAL ERROR: Default role '{}' not found in database. Check data.sql.", DEFAULT_ROLE_NAME);
+            throw new NotFoundException("Default role " + DEFAULT_ROLE_NAME + " not found. Cannot register user.");
+        }
+        Authority defaultRole = opDefaultRole.get();
+
+        // 3. Create and configure the new user
+        LocalUser user = new LocalUser();
         user.setEmail(registrationRequest.getEmail());
         user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
+
+        // 4. Assign the default role - CORRECTED LOGIC START
+
+        // Step A: Create a new collection (Set is better for roles)
+        // You must initialize the collection before adding items.
+        Set<Authority> authorities = new HashSet<>();
+
+        // Step B: Add the single Authority object to the collection
+        authorities.add(defaultRole);
+
+        // Step C: Set the collection on the user object
+        user.setAuthorities(authorities);
+
+        // 4. Assign the default role - CORRECTED LOGIC END
+
+        // 5. Save the user and create verification token
         userRepository.save(user);
-        log.info("New user saved to DB with email: {}", user.getEmail());
+        log.info("New user saved to DB with email: {}. Assigned {}.", user.getEmail(), defaultRole.getAuthority());
 
         VerificationToken verificationToken = verificationTokenService.createVerificationToken(user);
         verificationTokenRepository.save(verificationToken);
 
+        // 6. Send verification email
         log.debug("Verification token created for user: {}", user.getEmail());
         emailVerificationService.sendEmailConformationMessage(verificationToken);
         log.info("Verification email sent to user: {}", user.getEmail());
@@ -178,6 +202,7 @@ public class AuthenticationService {
                 return true;
             } else {
                 log.info("User ID {} is already verified.", user.getId());
+                return true;
             }
         } else {
             log.warn("Verification failed: Token not found: {}", token);

@@ -11,7 +11,6 @@ import java.sql.Timestamp;
 @Setter
 @Builder
 public class OrderItemDTO {
-
     private Long id;
     private Long productId;
     private int quantity;

@@ -3,7 +3,6 @@ package com.artemhontar.fluxdigitalstore.service.Email;
 import com.artemhontar.fluxdigitalstore.exception.EmailFailureException;
 import com.artemhontar.fluxdigitalstore.model.VerificationToken;
 import jakarta.mail.internet.MimeMessage; // Use jakarta for Spring Boot 3+
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper; // New helper class

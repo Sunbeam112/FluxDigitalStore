@@ -4,7 +4,7 @@ import com.artemhontar.fluxdigitalstore.exception.EmailsNotVerifiedException;
 import com.artemhontar.fluxdigitalstore.exception.PasswordResetCooldown;
 import com.artemhontar.fluxdigitalstore.model.LocalUser;
 import com.artemhontar.fluxdigitalstore.model.ResetPasswordToken;
-import com.artemhontar.fluxdigitalstore.repo.RPTRepository;
+import com.artemhontar.fluxdigitalstore.model.repo.RPTRepository;
 import com.artemhontar.fluxdigitalstore.service.User.RPTService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

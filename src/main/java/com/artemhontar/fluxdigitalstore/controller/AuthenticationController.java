@@ -1,18 +1,21 @@
 package com.artemhontar.fluxdigitalstore.controller;
 
-import com.artemhontar.fluxdigitalstore.api.model.User.LoginRequest;
-import com.artemhontar.fluxdigitalstore.api.model.User.LoginResponse;
-import com.artemhontar.fluxdigitalstore.api.model.User.PasswordResetRequest;
-import com.artemhontar.fluxdigitalstore.api.model.User.RegistrationRequest;
+import com.artemhontar.fluxdigitalstore.api.model.User.*;
 import com.artemhontar.fluxdigitalstore.exception.*;
+import com.artemhontar.fluxdigitalstore.model.LocalUser;
 import com.artemhontar.fluxdigitalstore.service.User.AuthenticationService;
 import com.artemhontar.fluxdigitalstore.service.ValidationErrorsParser;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -32,7 +35,7 @@ public class AuthenticationController {
      * Registers a new user in the system.
      *
      * @param registrationRequest The registration registrationRequest containing user details.
-     * @param result The binding result for validation errors.
+     * @param result              The binding result for validation errors.
      * @return A ResponseEntity indicating the outcome of the registration attempt.
      * - HttpStatus.CREATED (201) if the user is successfully registered.
      * - HttpStatus.CONFLICT (409) if a user with the provided email already exists.
@@ -41,7 +44,7 @@ public class AuthenticationController {
      */
     @PostMapping("/register")
     public ResponseEntity<Object> registerUser
-            (@Valid @RequestBody RegistrationRequest registrationRequest, BindingResult result) {
+    (@Valid @RequestBody RegistrationRequest registrationRequest, BindingResult result) {
         try {
             if (result.hasErrors()) {
                 throw new DetaiIsNotVerified(validationErrorsParser.parseErrorsFrom(result));
@@ -178,5 +181,31 @@ public class AuthenticationController {
         }
     }
 
+    /**
+     * Retrieves information about the currently authenticated user.
+     * * @return An Optional containing the UserInfoResponse DTO if a user is found, otherwise empty.
+     */
+    @GetMapping("/me")
+    public Optional<UserInfoResponse> getUserInfo() {
+        Optional<LocalUser> opUser = authenticationService.tryGetCurrentUser();
 
+        if (opUser.isEmpty()) {
+            return Optional.empty();
+        }
+
+        LocalUser user = opUser.get();
+        UserInfoResponse response = new UserInfoResponse();
+
+        response.setId(user.getId());
+        response.setEmail(user.getEmail());
+        response.setEmailVerified(user.isEmailVerified());
+
+        Set<String> roles = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+
+        response.setRoles(roles);
+
+        return Optional.of(response);
+    }
 }

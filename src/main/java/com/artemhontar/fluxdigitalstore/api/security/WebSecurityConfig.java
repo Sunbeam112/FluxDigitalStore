@@ -59,7 +59,7 @@ public class WebSecurityConfig {
         String[] allowedToUserPaths = {
                 "/order/create",
                 "/order",
-                "/user/me"
+                authBasePath + "/me"
         };
 
         http

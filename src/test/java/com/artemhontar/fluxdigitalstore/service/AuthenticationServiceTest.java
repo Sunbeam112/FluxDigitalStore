@@ -4,11 +4,13 @@ import com.artemhontar.fluxdigitalstore.api.model.User.LoginRequest;
 import com.artemhontar.fluxdigitalstore.api.model.User.RegistrationRequest;
 import com.artemhontar.fluxdigitalstore.api.security.JWTUtils;
 import com.artemhontar.fluxdigitalstore.exception.*;
+import com.artemhontar.fluxdigitalstore.model.Authority;
 import com.artemhontar.fluxdigitalstore.model.LocalUser;
 import com.artemhontar.fluxdigitalstore.model.ResetPasswordToken;
 import com.artemhontar.fluxdigitalstore.model.VerificationToken;
-import com.artemhontar.fluxdigitalstore.repo.UserRepo;
-import com.artemhontar.fluxdigitalstore.repo.verificationTokenRepository;
+import com.artemhontar.fluxdigitalstore.model.repo.AuthorityRepository; // New Dependency
+import com.artemhontar.fluxdigitalstore.model.repo.UserRepo;
+import com.artemhontar.fluxdigitalstore.model.repo.VerificationTokenRepository;
 import com.artemhontar.fluxdigitalstore.service.Email.EmailVerificationService;
 import com.artemhontar.fluxdigitalstore.service.Email.ResetPasswordEmailService;
 import com.artemhontar.fluxdigitalstore.service.User.AuthenticationService;
@@ -21,8 +23,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +32,7 @@ import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,7 +55,7 @@ class AuthenticationServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
-    private verificationTokenRepository verificationTokenRepository;
+    private VerificationTokenRepository verificationTokenRepository;
     @Mock
     private EmailVerificationService emailVerificationService;
     @Mock
@@ -70,6 +71,12 @@ class AuthenticationServiceTest {
     @Mock
     private Authentication authentication;
 
+    // NEW MOCKS ADDED TO MATCH UPDATED CONSTRUCTOR
+    @Mock
+    private ValidationErrorsParser validationErrorsParser;
+    @Mock
+    private AuthorityRepository authorityRepository;
+
     @InjectMocks
     private AuthenticationService authenticationService;
 
@@ -79,6 +86,7 @@ class AuthenticationServiceTest {
     private LoginRequest mockLoginRequest;
     private RegistrationRequest mockRegistrationRequest;
     private ResetPasswordToken mockRPT;
+    private Authority mockUserAuthority;
     private final String TEST_EMAIL = "test@mail.com";
     private final String UNVERIFIED_EMAIL = "unverified@mail.com";
     private final String TEST_PASSWORD = "password";
@@ -91,12 +99,16 @@ class AuthenticationServiceTest {
      */
     @BeforeEach
     void setUp() {
+        mockUserAuthority = new Authority();
+        mockUserAuthority.setAuthorityName("ROLE_USER");
+
         mockVerifiedUser = spy(new LocalUser());
         mockVerifiedUser.setId(1L);
         mockVerifiedUser.setEmail(TEST_EMAIL);
         mockVerifiedUser.setPassword(ENCODED_PASSWORD);
         mockVerifiedUser.setEmailVerified(true);
         mockVerifiedUser.setVerificationTokens(Collections.emptyList());
+        mockVerifiedUser.setAuthorities(Set.of(mockUserAuthority));
 
         mockUnverifiedUser = new LocalUser();
         mockUnverifiedUser.setId(2L);
@@ -104,6 +116,7 @@ class AuthenticationServiceTest {
         mockUnverifiedUser.setPassword(ENCODED_PASSWORD);
         mockUnverifiedUser.setEmailVerified(false);
         mockUnverifiedUser.setVerificationTokens(Collections.emptyList());
+        mockUnverifiedUser.setAuthorities(Set.of(mockUserAuthority));
 
         mockLoginRequest = new LoginRequest();
         mockLoginRequest.setEmail(TEST_EMAIL);
@@ -125,6 +138,9 @@ class AuthenticationServiceTest {
         } catch (EmailFailureException e) {
             throw new RuntimeException("Mock setup failed for email services.", e);
         }
+
+        // Stub the default role lookup for registration success test
+        lenient().when(authorityRepository.findByAuthorityName("ROLE_USER")).thenReturn(Optional.of(mockUserAuthority));
     }
 
     // ===================================
@@ -134,6 +150,7 @@ class AuthenticationServiceTest {
     /**
      * Tests successful user registration, verifying that the user is saved,
      * a verification token is created, and the confirmation email is sent.
+     * The new AuthorityRepository dependency is verified here.
      *
      * @throws Exception if an unexpected exception occurs during the registration process.
      */
@@ -146,6 +163,9 @@ class AuthenticationServiceTest {
 
         authenticationService.registerUser(mockRegistrationRequest, bindingResult);
 
+        // Verify Authority is looked up
+        verify(authorityRepository, times(1)).findByAuthorityName("ROLE_USER");
+        // Verify core registration steps
         verify(userRepository, times(1)).findByEmailIgnoreCase(TEST_EMAIL);
         verify(passwordEncoder, times(1)).encode(TEST_PASSWORD);
         verify(userRepository, times(1)).save(any(LocalUser.class));
@@ -162,6 +182,24 @@ class AuthenticationServiceTest {
         when(userRepository.findByEmailIgnoreCase(TEST_EMAIL)).thenReturn(Optional.of(mockVerifiedUser));
 
         assertThrows(UserAlreadyExist.class, () -> {
+            authenticationService.registerUser(mockRegistrationRequest, bindingResult);
+        });
+
+        verify(authorityRepository, never()).findByAuthorityName(anyString());
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any(LocalUser.class));
+    }
+
+    /**
+     * Tests registration failure when the default role is missing from the database,
+     * ensuring a RuntimeException is thrown.
+     */
+    @Test
+    void registerUser_DefaultRoleMissing_ThrowsRuntimeException() {
+        when(userRepository.findByEmailIgnoreCase(TEST_EMAIL)).thenReturn(Optional.empty());
+        when(authorityRepository.findByAuthorityName("ROLE_USER")).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> {
             authenticationService.registerUser(mockRegistrationRequest, bindingResult);
         });
 
@@ -187,6 +225,7 @@ class AuthenticationServiceTest {
         String token = authenticationService.loginUser(mockLoginRequest);
 
         assertEquals(MOCK_JWT, token);
+        // Note: AuthenticationService uses user.getUsername() which is email
         verify(jwtUtils, times(1)).generateToken(TEST_EMAIL);
     }
 
@@ -207,6 +246,23 @@ class AuthenticationServiceTest {
     }
 
     /**
+     * Tests login failure when the user does not exist.
+     *
+     * @throws Exception if an unexpected exception occurs during login.
+     */
+    @Test
+    void loginUser_UserNotFound_ReturnsNull() throws Exception {
+        when(userRepository.findByEmailIgnoreCase(TEST_EMAIL)).thenReturn(Optional.empty());
+
+        String token = authenticationService.loginUser(mockLoginRequest);
+
+        assertNull(token);
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+        verify(jwtUtils, never()).generateToken(anyString());
+    }
+
+
+    /**
      * Tests login attempt by an unverified user within the email resend cooldown period.
      * Should throw {@link UserNotVerifiedException} but not resend the email.
      *
@@ -215,6 +271,7 @@ class AuthenticationServiceTest {
     @Test
     void loginUser_UnverifiedUserNoResend_ThrowsException() throws EmailFailureException {
         VerificationToken token = new VerificationToken();
+        // Cooldown is 5 minutes (300000 ms), this is 10 seconds ago
         token.setCreatedTimestamp(new Timestamp(System.currentTimeMillis() - 10000));
         mockUnverifiedUser.setVerificationTokens(List.of(token));
 
@@ -239,6 +296,7 @@ class AuthenticationServiceTest {
     @Test
     void loginUser_UnverifiedUserWithResend_SendsEmailAndThrowsException() throws EmailFailureException {
         VerificationToken oldToken = new VerificationToken();
+        // Cooldown is 5 minutes (300000 ms), this is 6 minutes ago
         oldToken.setCreatedTimestamp(new Timestamp(System.currentTimeMillis() - 360000));
         mockUnverifiedUser.setVerificationTokens(List.of(oldToken));
 
@@ -275,6 +333,22 @@ class AuthenticationServiceTest {
         assertTrue(mockUnverifiedUser.isEmailVerified());
         verify(userRepository, times(1)).save(mockUnverifiedUser);
         verify(verificationTokenRepository, times(1)).deleteByLocalUser(mockUnverifiedUser);
+    }
+
+    /**
+     * Tests verification when the user is already verified. Should return true but not re-save or re-delete.
+     */
+    @Test
+    void verifyUser_AlreadyVerified_ReturnsTrueAndDoesNothing() {
+        VerificationToken token = new VerificationToken();
+        token.setLocalUser(mockVerifiedUser);
+        when(verificationTokenRepository.findByToken("valid_token")).thenReturn(Optional.of(token));
+
+        boolean result = authenticationService.verifyUser("valid_token");
+
+        assertTrue(result);
+        verify(userRepository, never()).save(any(LocalUser.class));
+        verify(verificationTokenRepository, never()).deleteByLocalUser(any(LocalUser.class));
     }
 
     // ===================================
@@ -333,6 +407,22 @@ class AuthenticationServiceTest {
         verify(userRepository, never()).findByEmailIgnoreCase(anyString());
     }
 
+    /**
+     * Tests password setting failure when user is not found.
+     *
+     * @throws EmailsNotVerifiedException should not be thrown.
+     */
+    @Test
+    void setUserPasswordByEmail_UserNotFound_ReturnsFalse() throws EmailsNotVerifiedException {
+        when(bindingResult.hasErrors()).thenReturn(false);
+        when(userRepository.findByEmailIgnoreCase("notfound@mail.com")).thenReturn(Optional.empty());
+
+        boolean result = authenticationService.setUserPasswordByEmail("notfound@mail.com", TEST_PASSWORD, bindingResult);
+
+        assertFalse(result);
+        verify(userRepository, never()).save(any());
+    }
+
     // ===================================
     // TEST: trySendResetPasswordEmail
     // ===================================
@@ -361,7 +451,7 @@ class AuthenticationServiceTest {
      * @throws EmailsNotVerifiedException should be thrown in this case.
      */
     @Test
-    void trySendResetPasswordEmail_UserNotVerified_ThrowsException() throws EmailsNotVerifiedException {
+    void trySendResetPasswordEmail_UserNotVerified_ThrowsException() throws EmailsNotVerifiedException, EmailFailureException {
         when(userRepository.findByEmailIgnoreCase(UNVERIFIED_EMAIL)).thenReturn(Optional.of(mockUnverifiedUser));
 
         assertThrows(EmailsNotVerifiedException.class, () -> {
@@ -369,6 +459,23 @@ class AuthenticationServiceTest {
         });
 
         verify(rptService, never()).tryToCreateRPT(any());
+        verify(resetPasswordEmailService, never()).sendResetPasswordEmail(any());
+    }
+
+    /**
+     * Tests silent failure when requesting a reset for a non-existent user.
+     *
+     * @throws Exception should not be thrown.
+     */
+    @Test
+    void trySendResetPasswordEmail_UserNotFound_SilentlyFails() throws Exception {
+        when(userRepository.findByEmailIgnoreCase("notfound@mail.com")).thenReturn(Optional.empty());
+
+        // Should not throw any exception
+        assertDoesNotThrow(() -> authenticationService.trySendResetPasswordEmail("notfound@mail.com"));
+
+        verify(rptService, never()).tryToCreateRPT(any());
+        verify(resetPasswordEmailService, never()).sendResetPasswordEmail(any());
     }
 
     /**
@@ -388,6 +495,40 @@ class AuthenticationServiceTest {
 
         verify(resetPasswordEmailService, never()).sendResetPasswordEmail(any());
     }
+
+    // ===================================
+    // TEST: tryGetCurrentUser
+    // ===================================
+
+    /**
+     * Tests retrieval of the current user from the SecurityContext.
+     */
+    @Test
+    void tryGetCurrentUser_UserAuthenticated_ReturnsUser() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(TEST_EMAIL);
+        when(userRepository.findByEmailIgnoreCase(TEST_EMAIL)).thenReturn(Optional.of(mockVerifiedUser));
+
+        Optional<LocalUser> result = authenticationService.tryGetCurrentUser();
+
+        assertTrue(result.isPresent());
+        assertEquals(TEST_EMAIL, result.get().getEmail());
+    }
+
+    /**
+     * Tests failure to retrieve current user when principal is null.
+     */
+    @Test
+    void tryGetCurrentUser_PrincipalIsNull_ReturnsEmpty() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(null);
+
+        Optional<LocalUser> result = authenticationService.tryGetCurrentUser();
+
+        assertFalse(result.isPresent());
+        verify(userRepository, never()).findByEmailIgnoreCase(anyString());
+    }
+
 
     // ===================================
     // TEST: Utility/Security Context
@@ -420,18 +561,4 @@ class AuthenticationServiceTest {
         assertTrue(authenticationService.isUserEmailVerified(TEST_EMAIL));
     }
 
-    /**
-     * Tests the security context check for the 'ROLE_ADMIN' authority.
-     */
-    @Test
-    void isAdmin_IsAdmin_ReturnsTrue() {
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        GrantedAuthority adminAuthority = new SimpleGrantedAuthority("ROLE_ADMIN");
-
-        doReturn(Collections.singletonList(adminAuthority)).when(authentication).getAuthorities();
-
-        boolean result = authenticationService.isAdmin();
-
-        assertTrue(result);
-    }
 }

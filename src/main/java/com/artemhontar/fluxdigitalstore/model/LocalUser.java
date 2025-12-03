@@ -8,10 +8,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Getter
 @Setter
@@ -53,11 +50,20 @@ public class LocalUser implements UserDetails {
     @OrderBy("id desc")
     private List<ResetPasswordToken> resetPasswordTokens = new ArrayList<>();
 
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "local_user_authority",
+            joinColumns = @JoinColumn(name = "local_user_id"),
+            inverseJoinColumns = @JoinColumn(name = "authority_id")
+    )
+    private Set<Authority> authorities = new HashSet<>();
+
     @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList();
+        return this.authorities;
     }
+
 
     @JsonIgnore
     @Override

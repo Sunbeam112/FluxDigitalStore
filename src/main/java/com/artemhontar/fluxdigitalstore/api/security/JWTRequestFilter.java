@@ -1,7 +1,7 @@
 package com.artemhontar.fluxdigitalstore.api.security;
 
 import com.artemhontar.fluxdigitalstore.model.LocalUser;
-import com.artemhontar.fluxdigitalstore.repo.UserRepo;
+import com.artemhontar.fluxdigitalstore.model.repo.UserRepo;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

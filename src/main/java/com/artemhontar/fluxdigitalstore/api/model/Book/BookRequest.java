@@ -1,5 +1,6 @@
 package com.artemhontar.fluxdigitalstore.api.model.Book;
 
+import lombok.Builder;
 import lombok.Getter;
 import jakarta.validation.constraints.*;
 
@@ -7,6 +8,7 @@ import java.math.BigDecimal;
 import java.util.Set;
 
 @Getter
+@Builder
 public class BookRequest {
     @NotBlank(message = "Title is mandatory")
     @Size(max = 255)

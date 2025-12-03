@@ -4,8 +4,7 @@ import com.artemhontar.fluxdigitalstore.exception.InventoryNotFound;
 import com.artemhontar.fluxdigitalstore.exception.NotEnoughStock;
 import com.artemhontar.fluxdigitalstore.model.Book;
 import com.artemhontar.fluxdigitalstore.model.Inventory;
-import com.artemhontar.fluxdigitalstore.repo.InventoryRepository;
-import com.artemhontar.fluxdigitalstore.service.Books.BookService;
+import com.artemhontar.fluxdigitalstore.model.repo.InventoryRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,19 +18,16 @@ import org.springframework.stereotype.Service;
 @Slf4j // Add Lombok logging annotation
 public class InventoryService {
 
-    private final BookService bookService;
     private final InventoryRepository inventoryRepository;
     private final LogDispatchService logDispatchService;
 
     /**
      * Constructs the InventoryService with required dependencies.
      *
-     * @param bookService         The service for fetching book details.
      * @param inventoryRepository The repository for managing {@link Inventory} entities.
      * @param logDispatchService  The service for logging dispatch events.
      */
-    public InventoryService(BookService bookService, InventoryRepository inventoryRepository, LogDispatchService logDispatchService) {
-        this.bookService = bookService;
+    public InventoryService(InventoryRepository inventoryRepository, LogDispatchService logDispatchService) {
         this.inventoryRepository = inventoryRepository;
         this.logDispatchService = logDispatchService;
     }

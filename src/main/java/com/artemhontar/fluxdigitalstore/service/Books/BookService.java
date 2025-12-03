@@ -7,9 +7,8 @@ import com.artemhontar.fluxdigitalstore.api.model.Book.BookDTO;
 import com.artemhontar.fluxdigitalstore.exception.BookAlreadyExistsException;
 import com.artemhontar.fluxdigitalstore.exception.NotFoundException;
 import com.artemhontar.fluxdigitalstore.model.Book;
-import com.artemhontar.fluxdigitalstore.repo.BookRepo;
+import com.artemhontar.fluxdigitalstore.model.repo.BookRepo;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -153,7 +152,7 @@ public class BookService {
         if (books != null && !books.isEmpty()) {
             return bookRepo.saveAll(books).stream()
                     .map(bookConverter::toDto)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toUnmodifiableList());
         }
         throw new IllegalArgumentException("List of books is empty or null!");
     }
@@ -192,5 +191,9 @@ public class BookService {
             return;
         }
         throw new NotFoundException("Book with ID " + id + " not found!");
+    }
+
+    public boolean existsByID(Long id) {
+        return bookRepo.existsById(id);
     }
 }

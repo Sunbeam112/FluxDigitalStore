@@ -1,15 +1,16 @@
 package com.artemhontar.fluxdigitalstore.api.model.User;
 
-import com.artemhontar.fluxdigitalstore.model.OrderItem;
+import com.artemhontar.fluxdigitalstore.api.model.Order.DeliveryAddressDTO;
+import com.artemhontar.fluxdigitalstore.api.model.Order.OrderItemDTO;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
 @Setter
 public class UserOrderRequest {
-    private List<OrderItem> orderItems;
+    DeliveryAddressDTO deliveryAddress;
+    private List<OrderItemDTO> orderItems;
 
 }

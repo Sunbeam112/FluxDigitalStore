@@ -140,8 +140,6 @@ VALUES ('Tess of the d''Urbervilles', '9780141439593', 10.00, 1891, 'The tragic 
         'A landmark work of 20th-century poetry.', 'Poetry', 'Modernist', 'url33');
 
 
--- *** 4. JOIN TABLE: BOOK-AUTHORS (All links using unique author IDs) ***
-
 -- *** 4. JOIN TABLE: BOOK-AUTHORS (Updated for Multiple Authors) ***
 -- Original Mappings (33 total):
 -- (1, 1), (2, 2), (3, 3), (4, 6), (5, 4), (6, 7), (7, 8), (8, 9), (9, 5), (10, 7), (11, 4), (12, 10), (13, 11), (14, 1), (15, 12), (16, 13), (17, 2), (18, 14), (19, 5), (20, 8), (21, 8), (22, 15), (23, 16), (24, 17), (25, 18), (26, 19), (27, 20), (28, 21), (29, 22), (30, 23), (31, 8), (32, 24), (33, 25)
@@ -252,8 +250,107 @@ VALUES (1, 1),
 -- Note: Passwords must be encoded (e.g., BCrypt). The hash below is for the plain password 'password'.
 -- Hash for 'password' (BCrypt): $2a$10$i1.Q.F2G.0.T1yB.rT/Q.t2.h3/5o.j5.t2G.7E.h6.p2.5/2.L8
 
-INSERT INTO local_user (email, is_email_verified, password)
-VALUES ('test1@mail.com', FALSE, '$2a$10$8uO1CjIwLoc0xniGfbUCwOs64gt./FEf0utOHAAc.sHocSxbwVuVO'), -- Unverified User
-       ('test2@mail.com', TRUE, '$2a$10$8uO1CjIwLoc0xniGfbUCwOs64gt./FEf0utOHAAc.sHocSxbwVuVO'),  -- Verified User
-       ('admin@mail.com', TRUE,
-        '$2a$10$8uO1CjIwLoc0xniGfbUCwOs64gt./FEf0utOHAAc.sHocSxbwVuVO'); -- Verified User (e.g., Admin)
+INSERT INTO local_user (id, email, is_email_verified, password)
+VALUES (1, 'test1@mail.com', FALSE,
+        '$2a$10$8uO1CjIwLoc0xniGfbUCwOs64gt./FEf0utOHAAc.sHocSxbwVuVO'), -- ID 1: Unverified User
+       (2, 'test2@mail.com', TRUE,
+        '$2a$10$8uO1CjIwLoc0xniGfbUCwOs64gt./FEf0utOHAAc.sHocSxbwVuVO'), -- ID 2: Verified User
+       (3, 'admin@mail.com', TRUE,
+        '$2a$10$8uO1CjIwLoc0xniGfbUCwOs64gt./FEf0utOHAAc.sHocSxbwVuVO');
+-- ID 3: Verified User (Admin)
+
+SELECT setval('local_user_id_seq', (SELECT MAX(id) FROM local_user) + 1, false);
+
+
+-- *** 7. VERIFICATION_TOKEN INSERTS (For Pre-Authenticated Testing) ***
+-- Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJVc2VyIERldGFpbHMiLCJFTUFJTF9DTEFJTSI6InRlc3QyQG1haWwuY29tIiwiZXhwIjoxNzY1MzY2OTk2LCJpYXQiOjE3NjQ3NjIxOTYsImlzcyI6IkFydGVtX0HvbnRhciJ9.h4WC9bg3IMo6jRUdVOyJw8x0lgNA_dGKLK5kwXf-XJs
+-- User: test2@mail.com (LocalUser ID 2)
+
+INSERT INTO verification_token (token, local_user_id, created_timestamp)
+VALUES ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJVc2VyIERldGFpbHMiLCJFTUFJTF9DTEFJTSI6InRlc3QyQG1haWwuY29tIiwiZXhwIjoxNzY1MzY2OTk2LCJpYXQiOjE3NjQ3NjIxOTYsImlzcyI6IkFydGVtX0HvbnRhciJ9.h4WC9bg3IMo6jRUdVOyJw8x0lgNA_dGKLK5kwXf-XJs',
+        2,
+        CURRENT_TIMESTAMP - INTERVAL '1 minute');
+
+-- *** 8. AUTHORITY INSERTS (Roles for Security) ***
+INSERT INTO authority (id, authority_name)
+VALUES (1, 'ROLE_USER'), -- ID 1
+       (2, 'ROLE_ADMIN');
+-- ID 2
+
+
+-- 🔑 POSTGRESQL SEQUENCE FIX FOR AUTHORITY 🔑
+-- This is also needed for authority table as you manually set IDs 1 and 2.
+SELECT setval('authority_id_seq', (SELECT MAX(id) FROM authority) + 1, false);
+
+
+-- *** 9. LOCAL_USER_AUTHORITY INSERTS (Assign Roles) ***
+INSERT INTO local_user_authority (local_user_id, authority_id)
+VALUES (1, 1), -- test1@mail.com (ID 1) is a standard ROLE_USER (ID 1)
+       (2, 1), -- test2@mail.com (ID 2) is a standard ROLE_USER (ID 1)
+       (3, 1), -- admin@mail.com (ID 3) is a ROLE_USER (ID 1)
+       (3, 2); -- admin@mail.com (ID 3) is also a ROLE_ADMIN (ID 2)
+
+
+-- *** 10. DELIVERY_ADDRESS INSERTS (Total 5 Addresses) ***
+-- Binds addresses to existing local_user IDs 1, 2, and 3.
+
+INSERT INTO delivery_address (local_user_id, first_name, last_name, address_line_1, address_line_2, city, country,
+                              zipcode)
+VALUES
+    -- Addresses for LocalUser ID 1 (test1@mail.com)
+    (1, 'Alice', 'Smith', '101 Pine St', 'Apt 4B', 'New York', 'USA', '10001'),
+    (1, 'Alice', 'Smith', '45 Elm Ave', NULL, 'Seattle', 'USA', '98101'),
+
+    -- Address for LocalUser ID 2 (test2@mail.com)
+    (2, 'Bob', 'Johnson', '20 King St', 'Suite 12', 'London', 'UK', 'SW1A 0AA'),
+
+    -- Addresses for LocalUser ID 3 (admin@mail.com)
+    (3, 'Charlie', 'Brown', '33 Oak Lane', 'The Cottage', 'Paris', 'France', '75001'),
+    (3, 'Charlie', 'Brown', '99 Main Road', NULL, 'Berlin', 'Germany', '10115');
+
+
+-- *** 11. INVENTORY INSERTS (Total 33 Inventories, one for each Book) ***
+-- Note: book_id is also the primary key for inventory.
+
+INSERT INTO inventory (book_id, warehouse_stock, on_hold_stock, min_threshold)
+VALUES
+    -- Popular Titles (High Stock)
+    (1, 250, 5, 10),  -- The Shining
+    (2, 300, 10, 10), -- And Then There Were None
+    (3, 180, 2, 5),   -- Frankenstein
+    (4, 400, 15, 20), -- 1984
+    (5, 500, 20, 20), -- The Lord of the Rings
+
+    -- Standard Titles (Medium Stock)
+    (6, 120, 5, 5),   -- Beloved
+    (7, 150, 8, 5),   -- Neverwhere
+    (8, 90, 3, 5),    -- Neuromancer
+    (9, 110, 4, 5),   -- Pride and Prejudice
+    (10, 80, 2, 5),   -- Sula
+
+    -- Low/Hot Titles (Low Stock, High Hold)
+    (11, 45, 15, 5),  -- The Hobbit (Low, but popular)
+    (12, 30, 5, 3),   -- Rebecca
+    (13, 22, 1, 3),   -- The Name of the Rose
+    (14, 50, 10, 10), -- The Stand (High min threshold)
+    (15, 35, 7, 3),   -- The Girl with the Dragon Tattoo
+
+    -- Remaining Titles (Various Stock)
+    (16, 75, 2, 5),   -- The Secret History
+    (17, 130, 3, 5),  -- Murder on the Orient Express
+    (18, 60, 1, 5),   -- A Scanner Darkly
+    (19, 105, 4, 5),  -- Sense and Sensibility
+    (20, 160, 6, 5),  -- Stardust
+    (21, 140, 5, 5),  -- The Graveyard Book
+    (22, 55, 1, 5),   -- Kindred
+    (23, 85, 2, 5),   -- The Picture of Dorian Gray
+    (24, 95, 3, 5),   -- A Tale of Two Cities
+    (25, 70, 2, 5),   -- Tess of the d'Urbervilles
+    (26, 115, 5, 5),  -- The Kite Runner
+    (27, 25, 0, 3),   -- The God Delusion (Lower stock, non-fiction)
+    (28, 15, 0, 3),   -- Becoming (Lower stock, non-fiction)
+    (29, 40, 1, 3),   -- The Haunting of Hill House
+    (30, 65, 3, 5),   -- Where the Crawdads Sing
+    (31, 10, 1, 3),   -- The Ocean at the End of the Lane (Very low stock)
+    (32, 50, 2, 5),   -- Dracula
+    (33, 5, 0, 1); -- The Waste Land (Minimal stock, specialized)

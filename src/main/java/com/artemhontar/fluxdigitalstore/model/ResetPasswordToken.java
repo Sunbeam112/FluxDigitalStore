@@ -37,8 +37,6 @@ public class ResetPasswordToken implements Comparable<ResetPasswordToken> {
     @ColumnDefault("false")
     private Boolean isTokenUsed = false;
 
-    // --- Standard CompareTo Implementation ---
-
     /**
      * Compares this token to the specified object based on its expiry date.
      * Tokens that expire sooner (older Timestamp) are considered "less than"

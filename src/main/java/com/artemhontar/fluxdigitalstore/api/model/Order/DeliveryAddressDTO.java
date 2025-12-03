@@ -1,13 +1,13 @@
 package com.artemhontar.fluxdigitalstore.api.model.Order;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 
 @Getter
 @Setter
 @Builder
+@AllArgsConstructor(access = lombok.AccessLevel.PUBLIC)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 public class DeliveryAddressDTO {
 
     private Long id;

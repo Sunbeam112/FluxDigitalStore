@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.repo;
+package com.artemhontar.fluxdigitalstore.model.repo;
 
 import com.artemhontar.fluxdigitalstore.model.Category;
 import org.springframework.data.jpa.repository.JpaRepository;

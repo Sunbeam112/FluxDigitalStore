@@ -4,7 +4,7 @@ import com.artemhontar.fluxdigitalstore.exception.InventoryNotFound;
 import com.artemhontar.fluxdigitalstore.exception.NotEnoughStock;
 import com.artemhontar.fluxdigitalstore.model.Book;
 import com.artemhontar.fluxdigitalstore.model.Inventory;
-import com.artemhontar.fluxdigitalstore.repo.InventoryRepository;
+import com.artemhontar.fluxdigitalstore.model.repo.InventoryRepository;
 import com.artemhontar.fluxdigitalstore.service.Books.BookService;
 import com.artemhontar.fluxdigitalstore.service.Order.InventoryService;
 import com.artemhontar.fluxdigitalstore.service.Order.LogDispatchService;

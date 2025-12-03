@@ -1,12 +1,13 @@
 package com.artemhontar.fluxdigitalstore.service.User;
 
 import com.artemhontar.fluxdigitalstore.model.LocalUser;
-import com.artemhontar.fluxdigitalstore.repo.UserRepo;
+import com.artemhontar.fluxdigitalstore.model.repo.UserRepo;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,19 +29,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         if (opUser.isEmpty()) {
             throw new UsernameNotFoundException("Could not find user with email: " + email);
         }
-        LocalUser user = opUser.get();
 
-        if (Objects.equals(user.getUsername(), "admin@fluxdgstore.com")) {
-            return new org.springframework.security.core.userdetails.User(
-                    user.getUsername(), user.getPassword(),
-                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN")));
-        }
-
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(), user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+        return opUser.get();
     }
-
 
 }

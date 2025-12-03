@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.repo;
+package com.artemhontar.fluxdigitalstore.model.repo;
 
 import com.artemhontar.fluxdigitalstore.model.Author;
 import org.springframework.data.jpa.repository.JpaRepository;

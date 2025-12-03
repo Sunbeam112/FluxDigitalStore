@@ -1,4 +1,4 @@
-package com.artemhontar.fluxdigitalstore.repo;
+package com.artemhontar.fluxdigitalstore.model.repo;
 
 import com.artemhontar.fluxdigitalstore.model.Book;
 import org.springframework.data.domain.Page;
@@ -10,7 +10,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-// 🚀 ADDING JpaSpecificationExecutor<Book>
 public interface BookRepo extends JpaRepository<Book, Long>, JpaSpecificationExecutor<Book> {
 
     boolean existsByIsbnIgnoreCase(String isbn);

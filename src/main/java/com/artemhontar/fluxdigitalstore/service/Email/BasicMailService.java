@@ -13,7 +13,7 @@ public abstract class BasicMailService {
 
     public final JavaMailSender mailSender;
 
-    public BasicMailService(JavaMailSender mailSender) {
+    protected BasicMailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
 
